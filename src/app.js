@@ -107,7 +107,7 @@ app.post("/messages", async (req, res) => {
     const messageSchema = joi.object({
         to: joi.string().min(1).required(),
         text: joi.string().min(1).required(),
-        type: joi.any().valid("message", "private_message")
+        type: joi.any().valid("message", "private_message").required()
     });
 
     const messageObject = { to, text, type };
