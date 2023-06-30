@@ -23,7 +23,7 @@ app.post("/participants", async (req, res) => {
     const nameSchema = joi.object({
         name: joi.string().min(1).required()
     });
-    
+
     const validation = nameSchema.validate(req.body, { abortEarly: false });
     if (validation.error) {
         const errors = validation.error.details.map(det => det.message);
@@ -64,20 +64,41 @@ app.get("/participants", async (req, res) => {
     }
 });
 
-// **************** finalizar com as mensagens personalizadas e validações *****************
-/*
-app.get("/messages", async(req, res) => {
+app.get("/messages", async (req, res) => {
     const { user } = req.headers;
     const { limit } = req.query;
 
-    try {
-        const messages = await db.collection("messages").find().toArray();
-        res.send(messages);
-    } catch(err) {
+    const criterio = {
+        $or: [
+            { type: "message" },
+            { to: "Todos" },
+            { $and: [{ type: "private_message" }, { to: user }] },
+            { $and: [{ type: "private_message" }, { from: user }] }
+        ]
+    }
 
+    const limitSchema = joi.object({
+        limit: joi.number().integer().min(1)
+    });
+
+    const validation = limitSchema.validate(req.query, { abortEarly: false });
+    if (validation.error) {
+        const errors = validation.error.details.map(det => det.message);
+        return res.status(422).send(errors);
+    }
+    
+    try {
+        let messages;
+        if (limit)
+            messages = await db.collection("messages").find(criterio).sort({ $natural: -1 }).limit(parseInt(limit)).toArray();
+        else
+            messages = await db.collection("messages").find(criterio).sort({ $natural: -1 }).toArray();
+        res.send(messages);
+
+    } catch (err) {
+        res.status(500).send(err.message);
     }
 });
-*/
 
 app.post("/messages", async (req, res) => {
     const { to, text, type } = req.body;
@@ -100,7 +121,7 @@ app.post("/messages", async (req, res) => {
         const participant = await db.collection("participants").findOne({ name: from }); // se participante não existe na sala/coleção, retorna erro
         if (!participant) return res.sendStatus(422);
 
-        await db.collection("messages").insertOne({from, ...messageObject, time: dayjs().format("HH:mm:ss")});
+        await db.collection("messages").insertOne({ from, ...messageObject, time: dayjs().format("HH:mm:ss") });
 
         res.sendStatus(201);
 
