@@ -147,7 +147,7 @@ app.post("/status", async (req, res) => {
         name: joi.string().min(1).required()
     });
 
-    const validation = nameSchema.validate( req.headers, { abortEarly: false });
+    const validation = nameSchema.validate({ name }, { abortEarly: false });
     if (validation.error) {
         const errors = validation.error.details.map(det => det.message);
         return res.status(404).send(errors);
