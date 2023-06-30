@@ -146,14 +146,41 @@ app.post("/status", async (req, res) => {
     try {
         const update = await db.collection("participants").updateOne({ name: name }, { $set: { lastStatus: Date.now() } });
         if (update.modifiedCount === 0) return res.sendStatus(404);
-        
+
         res.sendStatus(200);
     } catch (err) {
         res.status(500).send(err.message);
     }
 
 
-})
+});
+
+// remoção dos usuarios inativos
+const INTERVAL_TIME = 15000;
+const MAX_TIME = 10000;
+setInterval(async () => {
+    const nowTimestamp = Date.now();
+
+    try {
+        const inativeUsers = await db.collection("participants").find({ lastStatus: { $lt: nowTimestamp - MAX_TIME } }).toArray();
+        const messages = inativeUsers.map((u) => {
+            return {
+                from: u.name,
+                to: "Todos",
+                text: "sai da sala...",
+                type: "status",
+                time: dayjs().format("HH:mm:ss")
+            };
+        });
+
+        await db.collection("participants").deleteMany({ lastStatus: { $lt: nowTimestamp - MAX_TIME } });
+        await db.collection("messages").insertMany(messages);
+
+    } catch (err) {
+        console.log(err.message);
+    }
+
+}, INTERVAL_TIME);
 
 const PORT = 5000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
