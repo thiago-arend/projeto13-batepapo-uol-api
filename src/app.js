@@ -21,8 +21,6 @@ mongoClient.connect()
 app.post("/participants", async (req, res) => {
     const { name } = req.body;
 
-    //const stpName = stripHtml(name).result.trim();
-
     const nameSchema = joi.object({
         name: joi.string().min(1).required()
     });
@@ -33,15 +31,17 @@ app.post("/participants", async (req, res) => {
         return res.status(422).send(errors);
     }
 
+    const stpName = stripHtml(name).result.trim();
+
     try {
-        const participant = await db.collection("participants").findOne({ name: name }); // se participante já existe na sala/coleção, retorna erro
+        const participant = await db.collection("participants").findOne({ name: stpName }); // se participante já existe na sala/coleção, retorna erro
         if (participant) return res.status(409).send("Nome em uso!");
 
-        await db.collection("participants").insertOne({ name, lastStatus: Date.now() }); // não exisitindo, insere participante na sala/coleção
+        await db.collection("participants").insertOne({ name: stpName, lastStatus: Date.now() }); // não exisitindo, insere participante na sala/coleção
 
         await db.collection("messages").insertOne( // insere mensagem de entrada na sala na coleção messages
             {
-                from: name,
+                from: stpName,
                 to: 'Todos',
                 text: 'entra na sala...',
                 type: 'status',
@@ -107,9 +107,6 @@ app.post("/messages", async (req, res) => {
     const { to, text, type } = req.body;
     const { user: from } = req.headers; // renomeia o atributo para 'from'
 
-    //const arrayToStrip = [from, to, text, type];
-    //const [stpFrom, stpTo, stpText, stpType] = arrayToStrip.map(e => stripHtml(e).result.trim());
-
     const messageSchema = joi.object({
         to: joi.string().min(1).required(),
         text: joi.string().min(1).required(),
@@ -123,11 +120,16 @@ app.post("/messages", async (req, res) => {
         return res.status(422).send(errors);
     }
 
+    const arrayToStrip = [from, to, text, type];
+    const [stpFrom, stpTo, stpText, stpType] = arrayToStrip.map(e => stripHtml(e).result.trim());
+    const validMessageObject = {to: stpTo, text: stpText, type: stpType};
+
     try {
-        const participant = await db.collection("participants").findOne({ name: from }); // se participante não existe na sala/coleção, retorna erro
+        const participant = await db.collection("participants").findOne({ name: stpFrom }); // se participante não existe na sala/coleção, retorna erro
         if (!participant) return res.sendStatus(422);
 
-        await db.collection("messages").insertOne({ from, ...messageObject, time: dayjs().format("HH:mm:ss") });
+        await db.collection("messages").insertOne(
+            { from: stpFrom, ...validMessageObject, time: dayjs().format("HH:mm:ss") });
 
         res.sendStatus(201);
 
