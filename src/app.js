@@ -144,10 +144,9 @@ app.post("/status", async (req, res) => {
     }
 
     try {
-        const user = await db.collection("participants").findOne({ name: name });
-        if (!user) return res.sendStatus(404);
-
-        await db.collection("participants").updateOne({ name: name }, { $set: { lastStatus: Date.now() } });
+        const update = await db.collection("participants").updateOne({ name: name }, { $set: { lastStatus: Date.now() } });
+        if (update.modifiedCount === 0) return res.sendStatus(404);
+        
         res.sendStatus(200);
     } catch (err) {
         res.status(500).send(err.message);
