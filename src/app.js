@@ -79,17 +79,28 @@ app.get("/messages", async(req, res) => {
 });
 */
 
-// **************** problema com o encoding *****************
 app.post("/messages", async (req, res) => {
     const { to, text, type } = req.body;
     const { user: from } = req.headers; // renomeia o atributo para 'from'
-    console.log(from);
+
+    const messageSchema = joi.object({
+        to: joi.string().min(1).required(),
+        text: joi.string().min(1).required(),
+        type: joi.any().valid("message", "private_message")
+    });
+
+    const messageObject = { to, text, type };
+    const validation = messageSchema.validate(messageObject, { abortEarly: false });
+    if (validation.error) {
+        const errors = validation.error.details.map(det => det.message);
+        return res.status(422).send(errors);
+    }
 
     try {
         const participant = await db.collection("participants").findOne({ name: from }); // se participante não existe na sala/coleção, retorna erro
         if (!participant) return res.sendStatus(422);
 
-        await db.collection("messages").insertOne({ from, to, text, type, time: dayjs().format("HH:mm:ss") });
+        await db.collection("messages").insertOne({from, ...messageObject, time: dayjs().format("HH:mm:ss")});
 
         res.sendStatus(201);
 
