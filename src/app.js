@@ -153,16 +153,16 @@ app.post("/status", async (req, res) => {
         return res.status(404).send(errors);
     }
 
+    const stpName = stripHtml(name).result.trim();
+
     try {
-        const update = await db.collection("participants").updateOne({ name: name }, { $set: { lastStatus: Date.now() } });
+        const update = await db.collection("participants").updateOne({ name: stpName }, { $set: { lastStatus: Date.now() } });
         if (update.modifiedCount === 0) return res.sendStatus(404);
 
         res.sendStatus(200);
     } catch (err) {
         res.status(500).send(err.message);
     }
-
-
 });
 
 // remoção dos usuarios inativos
