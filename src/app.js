@@ -86,7 +86,7 @@ app.get("/messages", async (req, res) => {
         const errors = validation.error.details.map(det => det.message);
         return res.status(422).send(errors);
     }
-    
+
     try {
         let messages;
         if (limit)
@@ -129,6 +129,32 @@ app.post("/messages", async (req, res) => {
         res.status(500).send(err.message);
     }
 });
+
+app.post("/status", async (req, res) => {
+    const { user: name } = req.headers; // renomeia o atributo para 'name'
+
+    const nameSchema = joi.object({
+        name: joi.string().required()
+    });
+
+    const validation = nameSchema.validate({ name }, { abortEarly: false });
+    if (validation.error) {
+        const errors = validation.error.details.map(det => det.message);
+        return res.status(404).send(errors);
+    }
+
+    try {
+        const user = await db.collection("participants").findOne({ name: name });
+        if (!user) return res.sendStatus(404);
+
+        await db.collection("participants").updateOne({ name: name }, { $set: { lastStatus: Date.now() } });
+        res.sendStatus(200);
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+
+
+})
 
 const PORT = 5000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
