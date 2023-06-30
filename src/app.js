@@ -141,11 +141,13 @@ app.post("/messages", async (req, res) => {
 app.post("/status", async (req, res) => {
     const { user: name } = req.headers; // renomeia o atributo para 'name'
 
+    //if (!name) return res.sendStatus(404);
+
     const nameSchema = joi.object({
-        name: joi.string().required()
+        name: joi.string().min(1).required()
     });
 
-    const validation = nameSchema.validate({ name }, { abortEarly: false });
+    const validation = nameSchema.validate( req.headers, { abortEarly: false });
     if (validation.error) {
         const errors = validation.error.details.map(det => det.message);
         return res.status(404).send(errors);
