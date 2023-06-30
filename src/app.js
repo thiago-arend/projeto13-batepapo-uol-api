@@ -19,19 +19,19 @@ mongoClient.connect()
     .catch((err) => console.log(err.message));
 
 app.post("/participants", async (req, res) => {
-    const { name } = req.body;
-
-    const strippedName = stripHtml(name).trim();
+    let { name } = req.body;
 
     const nameSchema = joi.object({
         name: joi.string().min(1).required()
     });
 
-    const validation = nameSchema.validate({strippedName}, { abortEarly: false });
+    const validation = nameSchema.validate(req.body, { abortEarly: false });
     if (validation.error) {
         const errors = validation.error.details.map(det => det.message);
         return res.status(422).send(errors);
     }
+
+    name = stripHtml(name).trim();
 
     try {
         const participant = await db.collection("participants").findOne({ name: name }); // se participante já existe na sala/coleção, retorna erro
@@ -104,11 +104,8 @@ app.get("/messages", async (req, res) => {
 });
 
 app.post("/messages", async (req, res) => {
-    const { to, text, type } = req.body;
-    const { user: from } = req.headers; // renomeia o atributo para 'from'
-
-    const arrayToStrip = [from, to, text, type];
-    const [stpFrom, stpTo, stpText, stpType] = arrayToStrip.map(e => stripHtml(e).trim());
+    let { to, text, type } = req.body;
+    let { user: from } = req.headers; // renomeia o atributo para 'from'
 
     const messageSchema = joi.object({
         to: joi.string().min(1).required(),
@@ -116,7 +113,12 @@ app.post("/messages", async (req, res) => {
         type: joi.any().valid("message", "private_message").required()
     });
 
-    const messageObject = { stpTo, stpText, stpType };
+    from = stripHtml(from).trim();
+    to = stripHtml(to).trim();
+    text = stripHtml(text).trim();
+    type = stripHtml(type).trim();
+
+    const messageObject = { to, text, type };
     const validation = messageSchema.validate(messageObject, { abortEarly: false });
     if (validation.error) {
         const errors = validation.error.details.map(det => det.message);
@@ -124,10 +126,10 @@ app.post("/messages", async (req, res) => {
     }
 
     try {
-        const participant = await db.collection("participants").findOne({ name: stpFrom }); // se participante não existe na sala/coleção, retorna erro
+        const participant = await db.collection("participants").findOne({ name: from }); // se participante não existe na sala/coleção, retorna erro
         if (!participant) return res.sendStatus(422);
 
-        await db.collection("messages").insertOne({ stpFrom, ...messageObject, time: dayjs().format("HH:mm:ss") });
+        await db.collection("messages").insertOne({ from, ...messageObject, time: dayjs().format("HH:mm:ss") });
 
         res.sendStatus(201);
 
