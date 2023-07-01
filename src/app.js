@@ -107,7 +107,7 @@ app.post("/messages", async (req, res) => {
     const { to, text, type } = req.body;
     const { user: from } = req.headers; // renomeia o atributo para 'from'
 
-    if (!from) return res.sendStatus(404);
+    if (!from) return res.sendStatus(422);
 
     const messageSchema = joi.object({
         to: joi.string().min(1).required(),
