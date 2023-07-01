@@ -149,7 +149,7 @@ app.delete("/messages/:id", async (req, res) => {
         if (!msgExists) return res.sendStatus(404); // mensagem inexistente
         const correctSender = await db.collection("messages").deleteOne({ _id: new ObjectId(id) }, { from: user });
         if (correctSender.deletedCount === 0) return res.sendStatus(401); // se não conseguiu deletar, mensagem não pertence ao usuário
-        res.sendStatus(204); // sucesso
+        res.sendStatus(200); // sucesso
     } catch (err) {
         res.status(500).send(err.message);
     }
