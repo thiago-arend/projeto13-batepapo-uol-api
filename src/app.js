@@ -107,21 +107,19 @@ app.post("/messages", async (req, res) => {
     const { to, text, type } = req.body;
     const { user: from } = req.headers; // renomeia o atributo para 'from'
 
-    const headerValidation = joi.object({user: joi.string().min(1).required()}).validate(req.headers, { abortEarly: false });
-    if (headerValidation.error) {
-        const errors = headerValidation.error.details.map(det => det.message);
-        return res.status(422).send(errors);
-    }
+    //if (!from) return res.sendStatus(422);
 
-    const messageSchema = joi.object({
+    const dataSchema = joi.object({
+        from: joi.string().min(1).required(),
         to: joi.string().min(1).required(),
         text: joi.string().min(1).required(),
         type: joi.any().valid("message", "private_message").required()
     });
 
-    const bodyValidation = messageSchema.validate(req.body, { abortEarly: false });
-    if (bodyValidation.error) {
-        const errors = bodyValidation.error.details.map(det => det.message);
+    const messageObject = { from, to, text, type };
+    const validation = dataSchema.validate(messageObject, { abortEarly: false });
+    if (validation.error) {
+        const errors = validation.error.details.map(det => det.message);
         return res.status(422).send(errors);
     }
 
@@ -144,18 +142,19 @@ app.post("/messages", async (req, res) => {
 });
 
 app.post("/status", async (req, res) => {
+    const { user: name } = req.headers; // renomeia o atributo para 'name'
 
-    const headerSchema = joi.object({
-        user: joi.string().min(1).required()
+    const nameSchema = joi.object({
+        name: joi.string().min(1).required()
     });
 
-    const validation = headerSchema.validate(req.headers, { abortEarly: false });
+    const validation = nameSchema.validate({ name }, { abortEarly: false });
     if (validation.error) {
         const errors = validation.error.details.map(det => det.message);
         return res.status(404).send(errors);
     }
 
-    const stpName = stripHtml(req.headers).result.trim();
+    const stpName = stripHtml(name).result.trim();
 
     try {
         const update = await db.collection("participants").updateOne({ name: stpName }, { $set: { lastStatus: Date.now() } });
