@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import dotenv from "dotenv";
 import joi from "joi";
 import dayjs from "dayjs";
@@ -107,17 +107,16 @@ app.post("/messages", async (req, res) => {
     const { to, text, type } = req.body;
     const { user: from } = req.headers; // renomeia o atributo para 'from'
 
-    //if (!from) return res.sendStatus(422);
+    if (!from) return res.sendStatus(422);
 
-    const dataSchema = joi.object({
-        from: joi.string().min(1).required(),
+    const messageSchema = joi.object({
         to: joi.string().min(1).required(),
         text: joi.string().min(1).required(),
         type: joi.any().valid("message", "private_message").required()
     });
 
-    const messageObject = { from, to, text, type };
-    const validation = dataSchema.validate(messageObject, { abortEarly: false });
+    const messageObject = { to, text, type };
+    const validation = messageSchema.validate(messageObject, { abortEarly: false });
     if (validation.error) {
         const errors = validation.error.details.map(det => det.message);
         return res.status(422).send(errors);
@@ -125,7 +124,7 @@ app.post("/messages", async (req, res) => {
 
     const arrayToStrip = [from, to, text, type];
     const [stpFrom, stpTo, stpText, stpType] = arrayToStrip.map(e => stripHtml(e).result.trim());
-    const validMessageObject = {to: stpTo, text: stpText, type: stpType};
+    const validMessageObject = { to: stpTo, text: stpText, type: stpType };
 
     try {
         const participant = await db.collection("participants").findOne({ name: stpFrom }); // se participante não existe na sala/coleção, retorna erro
@@ -136,6 +135,21 @@ app.post("/messages", async (req, res) => {
 
         res.sendStatus(201);
 
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+});
+
+app.delete("/messages/:id", async (req, res) => {
+    const { id } = req.params;
+    const { user } = req.headers;
+
+    try {
+        const msgExists = await db.collection("messages").findOne({ _id: new ObjectId(id) });
+        if (!msgExists) return res.sendStatus(404); // mensagem inexistente
+        const correctSender = await db.collection("messages").deleteOne({ _id: new ObjectId(id) }, { from: user });
+        if (correctSender.deletedCount === 0) return res.sendStatus(401); // se não conseguiu deletar, mensagem não pertence ao usuário
+        res.sendStatus(204); // sucesso
     } catch (err) {
         res.status(500).send(err.message);
     }
