@@ -220,7 +220,6 @@ app.post("/status", async (req, res) => {
 });
 
 // remoção dos usuarios inativos
-/*
 const INTERVAL_TIME = 15000;
 const MAX_TIME = 10000;
 setInterval(async () => {
@@ -246,7 +245,7 @@ setInterval(async () => {
     }
 
 }, INTERVAL_TIME);
-*/
+
 
 const PORT = 5000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
