@@ -155,6 +155,44 @@ app.delete("/messages/:id", async (req, res) => {
     }
 });
 
+app.put("/messages/:id", async (req, res) => {
+    const { to, text, type } = req.body;
+    const { user: from } = req.headers; // renomeia o atributo para 'from'
+    const { id } = req.params;
+
+    if (!from) return res.sendStatus(422);
+
+    const messageSchema = joi.object({
+        to: joi.string().min(1).required(),
+        text: joi.string().min(1).required(),
+        type: joi.any().valid("message", "private_message").required()
+    });
+
+    const messageObject = { to, text, type };
+    const validation = messageSchema.validate(messageObject, { abortEarly: false });
+    if (validation.error) {
+        const errors = validation.error.details.map(det => det.message);
+        return res.status(422).send(errors);
+    }
+
+    const arrayToStrip = [from, to, text, type];
+    const [stpFrom, stpTo, stpText, stpType] = arrayToStrip.map(e => stripHtml(e).result.trim());
+    const validMessageObject = { to: stpTo, text: stpText, type: stpType };
+
+    try {
+        const participant = await db.collection("participants").findOne({ name: stpFrom }); // se participante não existe na sala/coleção, retorna erro
+        if (!participant) return res.sendStatus(422);
+
+        const msgExists = await db.collection("messages").findOne({_id: new ObjectId(id)});
+        if (!msgExists) return res.sendStatus(404);
+        const updateSucess = await db.collection("messages").updateOne({$and: [{_id: new ObjectId(id)}, {from: from}]}, {$set: validMessageObject});
+        if (updateSucess.matchedCount === 0) return res.sendStatus(401);
+
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+});
+
 app.post("/status", async (req, res) => {
     const { user: name } = req.headers; // renomeia o atributo para 'name'
 
