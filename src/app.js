@@ -141,7 +141,7 @@ app.post("/messages", async (req, res) => {
 app.post("/status", async (req, res) => {
     const { user: name } = req.headers; // renomeia o atributo para 'name'
 
-    if (!name) return res.sendStatus(404);
+    //if (!name) return res.sendStatus(404);
 
     const nameSchema = joi.object({
         name: joi.string().min(1).required()
