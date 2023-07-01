@@ -19,6 +19,8 @@ mongoClient.connect()
     .catch((err) => console.log(err.message));
 
 app.post("/participants", async (req, res) => {
+    const { name } = req.body;
+
     const nameSchema = joi.object({
         name: joi.string().min(1).required()
     });
@@ -29,7 +31,7 @@ app.post("/participants", async (req, res) => {
         return res.status(422).send(errors);
     }
 
-    const stpName = stripHtml(req.body).result.trim();
+    const stpName = stripHtml(name).result.trim();
 
     try {
         const participant = await db.collection("participants").findOne({ name: stpName }); // se participante já existe na sala/coleção, retorna erro
@@ -105,7 +107,7 @@ app.post("/messages", async (req, res) => {
     const { to, text, type } = req.body;
     const { user: from } = req.headers; // renomeia o atributo para 'from'
 
-    if (!from) return res.sendStatus(422);
+    if (!from) return res.sendStatus(404);
 
     const messageSchema = joi.object({
         to: joi.string().min(1).required(),
@@ -126,7 +128,7 @@ app.post("/messages", async (req, res) => {
 
     try {
         const participant = await db.collection("participants").findOne({ name: stpFrom }); // se participante não existe na sala/coleção, retorna erro
-        if (!participant) return res.sendStatus(422); // se o from nao tiver sido enviado ou for de usuario nao presente
+        if (!participant) return res.sendStatus(422);
 
         await db.collection("messages").insertOne(
             { from: stpFrom, ...validMessageObject, time: dayjs().format("HH:mm:ss") });
@@ -139,18 +141,19 @@ app.post("/messages", async (req, res) => {
 });
 
 app.post("/status", async (req, res) => {
+    const { user: name } = req.headers; // renomeia o atributo para 'name'
 
     const nameSchema = joi.object({
         name: joi.string().min(1).required()
     });
 
-    const validation = nameSchema.validate(req.headers, { abortEarly: false });
+    const validation = nameSchema.validate({ name }, { abortEarly: false });
     if (validation.error) {
         const errors = validation.error.details.map(det => det.message);
         return res.status(404).send(errors);
     }
 
-    const stpName = stripHtml(req.headers).result.trim();
+    const stpName = stripHtml(name).result.trim();
 
     try {
         const update = await db.collection("participants").updateOne({ name: stpName }, { $set: { lastStatus: Date.now() } });
