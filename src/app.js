@@ -147,7 +147,7 @@ app.delete("/messages/:id", async (req, res) => {
     try {
         const msgExists = await db.collection("messages").findOne({ _id: new ObjectId(id) });
         if (!msgExists) return res.sendStatus(404); // mensagem inexistente
-        const correctSender = await db.collection("messages").deleteOne({ _id: new ObjectId(id) }, { from: user });
+        const correctSender = await db.collection("messages").deleteOne({$and: [{ _id: new ObjectId(id) }, { from: user }]});
         if (correctSender.deletedCount === 0) return res.sendStatus(401); // se não conseguiu deletar, mensagem não pertence ao usuário
         res.sendStatus(200); // sucesso
     } catch (err) {
@@ -187,6 +187,7 @@ app.put("/messages/:id", async (req, res) => {
         if (!msgExists) return res.sendStatus(404);
         const updateSucess = await db.collection("messages").updateOne({$and: [{_id: new ObjectId(id)}, {from: from}]}, {$set: validMessageObject});
         if (updateSucess.matchedCount === 0) return res.sendStatus(401);
+        res.sendStatus(200);
 
     } catch (err) {
         res.status(500).send(err.message);
@@ -219,6 +220,7 @@ app.post("/status", async (req, res) => {
 });
 
 // remoção dos usuarios inativos
+/*
 const INTERVAL_TIME = 15000;
 const MAX_TIME = 10000;
 setInterval(async () => {
@@ -244,6 +246,7 @@ setInterval(async () => {
     }
 
 }, INTERVAL_TIME);
+*/
 
 const PORT = 5000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
