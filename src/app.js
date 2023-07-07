@@ -227,19 +227,21 @@ setInterval(async () => {
 
     try {
         const inativeUsers = await db.collection("participants").find({ lastStatus: { $lt: nowTimestamp - MAX_TIME } }).toArray();
-        const messages = inativeUsers.map((u) => {
-            return {
-                from: u.name,
-                to: "Todos",
-                text: "sai da sala...",
-                type: "status",
-                time: dayjs().format("HH:mm:ss")
-            };
-        });
 
-        await db.collection("participants").deleteMany({ lastStatus: { $lt: nowTimestamp - MAX_TIME } });
-        await db.collection("messages").insertMany(messages);
-
+        if (inativeUsers.length > 0) {
+            const messages = inativeUsers.map((u) => {
+                return {
+                    from: u.name,
+                    to: "Todos",
+                    text: "sai da sala...",
+                    type: "status",
+                    time: dayjs().format("HH:mm:ss")
+                };
+            });
+    
+            await db.collection("participants").deleteMany({ lastStatus: { $lt: nowTimestamp - MAX_TIME } });
+            await db.collection("messages").insertMany(messages);
+        }
     } catch (err) {
         console.log(err.message);
     }
